@@ -21,7 +21,7 @@ class dbcParser(object):
         self.keyWords = {'VERSION':self.versionHdl,
                          'BU_':self.nodeHdl,
                          'BO_':self.msgHdl,
-                         'SG':self.signalHdl}
+                         ' SG_':self.signalHdl}
         self._currentNode = None
         self._currentMsg  = None
         self._currentSignal = None
@@ -31,12 +31,12 @@ class dbcParser(object):
             for line in f:
                 self.parseLine(line)
     def parseLine(self,line):
-        for key,item in self.keyWords.items():
+        for key,func in self.keyWords.items():
             if line.startswith(key):
-                item(line)
+                line = line.strip()
+                func(line)
         
     def versionHdl(self,line):
-        line = line.strip()
         self.patten = 'VERSION\s+"(?P<version>\S+)"'
         reg = re.search(self.patten ,line)
         if reg:
@@ -45,7 +45,6 @@ class dbcParser(object):
             raise AttributeError('no version defined')
         
     def nodeHdl(self,line):
-        line = line.strip()
         self.patten = 'BU_\s*:\s*(?P<nodes>.+)\s*'
         reg = re.search(self.patten ,line)
         reg = re.sub('\s+', ' ', reg.group('nodes')).strip()
@@ -56,30 +55,34 @@ class dbcParser(object):
             raise AttributeError('no node defined')
 
     def msgHdl(self,line):
-        line = line.strip()
         self.patten = 'BO_\s+(?P<msgId>\d+)\s+(?P<msgName>\S+)\s*:\s*(?P<length>\d+)\s+(?P<msgSender>\S+)'
         reg = re.search(self.patten, line)
-        #create a message object
+        
         try:
-            self._currentMsg = dbcCoreModel.CoreModel.CanMsg(reg.group('msgId'),reg.group('msgName'),reg.group('length'),msgSender = self._canNetwork._nodes[reg.group('msgSender')])
-            #add this message to parent node's tx message
-            self._canNetwork.Nodes[self._currentMsg.MsgSender.NodeName].appendTxMsg(self._currentMsg.MsgName,self._currentMsg)
+            self._currentMsgSender = self._canNetwork._nodes[reg.group('msgSender')]
         except KeyError:
             print('the msg sender {0} is not in the list of ecu nodes'.format(reg.group('msgSender')))
+            self._currentMsgSender = dbcCoreModel.CoreModel.CanNode(reg.group('msgSender'))
+            self._canNetwork.appendNodes(self._currentMsgSender.NodeName,self._currentMsgSender)
+            
+        #create a message object    
+        self._currentMsg = dbcCoreModel.CoreModel.CanMsg(reg.group('msgId'),reg.group('msgName'),reg.group('length'),msgSender = self._currentMsgSender)
+        #add this message to parent node's tx message
+        self._canNetwork.Nodes[self._currentMsg.MsgSender.NodeName].appendTxMsg(self._currentMsg.MsgName,self._currentMsg)
+
               
     def signalHdl(self,line):
-        line = line.strip()
         self.pattern  = 'SG_\s+(?P<name>\S+)\s*(?P<isMultiplexer>M)?(?P<multiplexerId>m\d+)?\s*:\s*'
         self.pattern += '(?P<startBit>\d+)\|(?P<length>\d+)\@(?P<littleEndian>[0|1])(?P<signed>[\+|\-])\s*'
         self.pattern += '\(\s*(?P<factor>\S+)\s*,\s*(?P<offset>\S+)\s*\)\s*'
-        self.pattern += '\[\s*(?P<valueMin>\S+)\s*\|\s*(?P<valueMax>\S+)\s*\]\s*"(?P<unit>\S*)"\s+(?P<receivers>.+)'
-        reg = re.search(self.patten, line)
+        self.pattern += '\[\s*(?P<valueMin>\S+)\s*\|\s*(?P<valueMax>\S+)\s*\]\s*"(?P<unit>\S*)?"?\s+(?P<receivers>.+)'
+        reg = re.search(self.pattern, line)
         #create a signal object
-        self._currentSignal= dbcCoreModel.CoreModel.CanMsg(reg.group('name'),reg.group('startBit'),reg.group('length'),reg.group('littleEndian'),reg.group('signed'),
+        self._currentSignal= dbcCoreModel.CoreModel.CANSignal(reg.group('name'),reg.group('startBit'),reg.group('length'),reg.group('littleEndian'),reg.group('signed'),
                                                  reg.group('factor'),reg.group('offset'),reg.group('valueMin'),reg.group('valueMax'),reg.group('unit'),
                                                  reg.group('isMultiplexer'),reg.group('multiplexerId'),msgCarrier = self._currentMsg)
         #add this signal to parent msg
-        self._currentMsg.appendSignal(self._currentMsg.MsgName, self._currentMsg)
+        self._currentMsg.appendSignal(self._currentSignal.SignalName, self._currentSignal)
         
 if __name__ == "__main__":
     import sys
