@@ -75,7 +75,7 @@ class dbcParser(object):
         self.pattern  = 'SG_\s+(?P<name>\S+)\s*(?P<isMultiplexer>M)?(?P<multiplexerId>m\d+)?\s*:\s*'
         self.pattern += '(?P<startBit>\d+)\|(?P<length>\d+)\@(?P<littleEndian>[0|1])(?P<signed>[\+|\-])\s*'
         self.pattern += '\(\s*(?P<factor>\S+)\s*,\s*(?P<offset>\S+)\s*\)\s*'
-        self.pattern += '\[\s*(?P<valueMin>\S+)\s*\|\s*(?P<valueMax>\S+)\s*\]\s*"(?P<unit>\S*)?"?\s+(?P<receivers>.+)'
+        self.pattern += '\[\s*(?P<valueMin>\S+)\s*\|\s*(?P<valueMax>\S+)\s*\]\s*"?(?P<unit>[^"]*)?"?\s+(?P<receivers>.+)'
         reg = re.search(self.pattern, line)
         #create a signal object
         self._currentSignal= dbcCoreModel.CoreModel.CANSignal(reg.group('name'),reg.group('startBit'),reg.group('length'),reg.group('littleEndian'),reg.group('signed'),
@@ -93,5 +93,6 @@ if __name__ == "__main__":
         for msgName,msg in node.NodeTxMsgs.items():
             print("        {0}".format(msgName))
             for signalName,signal in msg.MsgSignals.items():
-                print("                {0}".format(signalName))
+                print("                {0},start-{1},len-{2},endian-{3},sign-{4},factor-{5},offset-{6},Min-{7},Max-{8},unit-{9}"
+                      .format(signalName,signal.SignalStartBit,signal.SignalLength,signal.SignalLittleEndian,signal.SignalSigned,signal.SignalFactor,signal.SignalOffset,signal.SignalMinValue,signal.SignalMaxValue,signal.SignalUnit))
     print('dbc parsing succeed')
