@@ -55,7 +55,8 @@ class CanMsgLayoutDecoder(object):
                                 self._laidSignals[signal.SignalName+str(self._mulByteIdx)] = CANSignal(signal.SignalName+str(self._mulByteIdx),self._unusedBits[byteIdx],8-self._unusedBits[byteIdx])
                                 self._mulByteIdx += 1
                                 signal.SignalLength -= 8-self._unusedBits[byteIdx]
-                                byteIdx += 1
+                                if byteIdx < 7:
+                                    byteIdx += 1
                             else:
                                 #create signal within signal byte
                                 self._laidSignals[signal.SignalName] = CANSignal(signal.SignalName+str(self._mulByteIdx),self._unusedBits[byteIdx],signal.SignalLength)
@@ -69,7 +70,8 @@ class CanMsgLayoutDecoder(object):
                             self._laidSignals[signal.SignalName+str(self._mulByteIdx)] = CANSignal(signal.SignalName+str(self._mulByteIdx),self._unusedBits[byteIdx],8-self._unusedBits[byteIdx])
                             self._mulByteIdx += 1
                             signal.SignalLength -= 8-self._unusedBits[byteIdx]
-                            byteIdx -= 1
+                            if byteIdx < 7:
+                                byteIdx += 1
                         else:
                             #create signal within signal byte
                             self._laidSignals[signal.SignalName] = CANSignal(signal.SignalName+str(self._mulByteIdx),self._unusedBits[byteIdx],signal.SignalLength)
