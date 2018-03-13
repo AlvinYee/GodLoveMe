@@ -1,0 +1,18 @@
+'''
+Created on 13th,March,2018
+
+@author: Alvin Ye
+'''
+from dbcParser.dbcParser import dbcParser
+from CanMsgLayoutDecoder.CanMsgLayoutDecoder import CanMsgLayoutDecoder
+
+if __name__ == "__main__":
+    import sys
+    myParser = dbcParser()
+#     try:
+    myParser.parseDbc(sys.argv[1])
+    print('INFO: dbc parsing succeed')
+    for msg in myParser._canNetwork.Nodes['Elec_Steering_Column_Lock'].NodeTxMsgs.values():
+        print(CanMsgLayoutDecoder(msg).createLayout())
+#     except:
+#         print("ERROR: no dbc file designated")
