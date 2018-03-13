@@ -14,7 +14,7 @@ class CanMsgLayoutDecoder(object):
         Constructor
         '''
         self.msg = msgObject
-        self._usedBits = [0,0,0,0,0,0,0,0]
+        self._unusedBits = [0,0,0,0,0,0,0,0]
 #         self.fieldDef = ''
 #         self._prefix   = ' unit8 '
 #         self._delimiter = ' : '
@@ -35,43 +35,44 @@ class CanMsgLayoutDecoder(object):
         
         self.sortSignal()
         for byteIdx in range(0,8):
-            for (startPostion,signal) in self._sortedSignals:
+            for (startBit,signal) in self._sortedSignals:
                 #iterate from byte0-byte7
-                if startPostion < (byteIdx+1) * 8-1:
+                if startBit < (byteIdx+1) * 8-1:
                     #1 check any gap
-                    if signal.SignalStartBit != self._usedBits[byteIdx]:
+                    if  startBit%8 != self._unusedBits[byteIdx]:
                         #create gap signal
-                        self._laidSignals[str(self._gapIdx)+self._gap] = CANSignal(name = signal.SignalName,startBit=self._usedBits[byteIdx],length=startPostion%8*-self._usedBits[byteIdx])
+                        self._laidSignals[self._gap+str(self._gapIdx)] = CANSignal(self._gap+str(self._gapIdx),self._unusedBits[byteIdx],startBit%8-self._unusedBits[byteIdx])
                         #shift unused bit position
-                        self._usedBits[byteIdx] = startPostion%8
+                        self._unusedBits[byteIdx] = startBit%8
                         self._gapIdx += 1
                     #2 check endian-ness
                     if signal.SignalLittleEndian:
                         #this is Intel
                         #3 check multiple-byte?
                         try:
-                            while int(signal.SignalLength) + self._usedBits[byteIdx] > 8:
-                                self._laidSignals[str(self._mulByteIdx)+signal.SignalName] = CANSignal(name = signal.SignalName,startBit=self._usedBits[byteIdx],length=8-self._usedBits[byteIdx])
+                            #overflow on one byte
+                            while int(signal.SignalLength) + self._unusedBits[byteIdx] > 9:
+                                self._laidSignals[signal.SignalName+str(self._mulByteIdx)] = CANSignal(signal.SignalName+str(self._mulByteIdx),self._unusedBits[byteIdx],8-self._unusedBits[byteIdx])
                                 self._mulByteIdx += 1
-                                signal.SignalLength -= 8-self._usedBits[byteIdx]
+                                signal.SignalLength -= 8-self._unusedBits[byteIdx]
                                 byteIdx += 1
                             else:
                                 #create signal within signal byte
-                                self._laidSignals[signal.SignalName] = CANSignal(name = signal.SignalName,startBit=self._usedBits[byteIdx],length=signal.SignalLength)
+                                self._laidSignals[signal.SignalName] = CANSignal(signal.SignalName+str(self._mulByteIdx),self._unusedBits[byteIdx],signal.SignalLength)
                                 self._mulByteIdx = 0
                         except:                           
                             pass
                     else:
                         #this is Motorola
                         #check multiple-byte?
-                        while signal.SignalLength + self._usedBits[byteIdx] > 8:
-                            self._laidSignals[str(self._mulByteIdx)+signal.SignalName] = CANSignal(name = signal.SignalName,startBit=self._usedBits[byteIdx],length=8-self._usedBits[byteIdx])
+                        while signal.SignalLength + self._unusedBits[byteIdx] > 9:
+                            self._laidSignals[signal.SignalName+str(self._mulByteIdx)] = CANSignal(signal.SignalName+str(self._mulByteIdx),self._unusedBits[byteIdx],8-self._unusedBits[byteIdx])
                             self._mulByteIdx += 1
-                            signal.SignalLength -= 8-self._usedBits[byteIdx]
+                            signal.SignalLength -= 8-self._unusedBits[byteIdx]
                             byteIdx -= 1
                         else:
                             #create signal within signal byte
-                            self._laidSignals[signal.SignalName] = CANSignal(name = signal.SignalName,startBit=self._usedBits[byteIdx],length=signal.SignalLength)
+                            self._laidSignals[signal.SignalName] = CANSignal(signal.SignalName+str(self._mulByteIdx),self._unusedBits[byteIdx],signal.SignalLength)
                             self._mulByteIdx = 0
                        
         return self._laidSignals
