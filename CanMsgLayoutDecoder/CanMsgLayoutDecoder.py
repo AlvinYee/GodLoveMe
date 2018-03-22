@@ -15,7 +15,7 @@ class CanMsgLayoutDecoder(object):
         '''
         self.msg = msgObject
         self._unusedBitsHead = [0,0,0,0,0,0,0,0]
-        self._unusedBitsTail = [8,8,8,8,8,8,8,8]
+        self._unusedBitsTail = [7,7,7,7,7,7,7,7]
 #         self.fieldDef = ''
 #         self._prefix   = ' unit8 '
 #         self._delimiter = ' : '
@@ -33,58 +33,12 @@ class CanMsgLayoutDecoder(object):
             self._sortedSignals[signal.SignalStartBit] = signal
             #sort signals in the dict by start bit, but return a list of tuples!
         self._sortedSignals = sorted(self._sortedSignals.items(),key = lambda d:d[0])
-     
-#     def createLayout(self):
-#         #TODO:       
-#         self.sortSignal()
-#         for byteIdx in range(0,8):
-#             for (startBit,signal) in self._sortedSignals:
-#                 #iterate from byte0-byte7
-#                 if startBit < (byteIdx+1) * 8-1:
-#                     #1 check any gap
-#                     if  startBit%8 != self._unusedBitsHead[byteIdx]:
-#                         #create gap signal
-#                         self._laidSignals[self._gap+str(self._gapIdx)] = CANSignal(self._gap+str(self._gapIdx),self._unusedBitsHead[byteIdx],startBit%8-self._unusedBitsHead[byteIdx])
-#                         #shift unused bit position
-#                         self._unusedBitsHead[byteIdx] = startBit%8
-#                         self._gapIdx += 1
-#                     #2 check endian-ness
-#                     if signal.SignalLittleEndian:
-#                         #this is Intel
-#                         #3 check multiple-byte?
-#                         try:
-#                             #overflow on one byte
-#                             while int(signal.SignalLength) + self._unusedBitsHead[byteIdx] > 9:
-#                                 self._laidSignals[signal.SignalName+str(self._mulByteIdx)] = CANSignal(signal.SignalName+str(self._mulByteIdx),self._unusedBitsHead[byteIdx],8-self._unusedBitsHead[byteIdx])
-#                                 self._mulByteIdx += 1
-#                                 signal.SignalLength -= 8-self._unusedBitsHead[byteIdx]
-#                                 if byteIdx < 7:
-#                                     byteIdx += 1
-#                             else:
-#                                 #create signal within signal byte
-#                                 self._laidSignals[signal.SignalName+str(self._mulByteIdx)] = CANSignal(signal.SignalName+str(self._mulByteIdx),self._unusedBitsHead[byteIdx],signal.SignalLength)
-#                                 self._mulByteIdx = 0
-#                         except:                           
-#                             pass
-#                     else:
-#                         #this is Motorola
-#                         #check multiple-byte?
-#                         while signal.SignalLength + self._unusedBitsHead[byteIdx] > 9:
-#                             self._laidSignals[signal.SignalName+str(self._mulByteIdx)] = CANSignal(signal.SignalName+str(self._mulByteIdx),self._unusedBitsHead[byteIdx],8-self._unusedBitsHead[byteIdx])
-#                             self._mulByteIdx += 1
-#                             signal.SignalLength -= 8-self._unusedBitsHead[byteIdx]
-#                             if byteIdx < 7:
-#                                 byteIdx += 1
-#                         else:
-#                             #create signal within signal byte
-#                             self._laidSignals[signal.SignalName] = CANSignal(signal.SignalName+str(self._mulByteIdx),self._unusedBitsHead[byteIdx],signal.SignalLength)
-#                             self._mulByteIdx = 0
-#                        
-#         return self._laidSignals
+
     def createLayout(self):
         #TODO:       
         self.sortSignal()
         for byteIdx in range(0,8):
+            byteIdxTemp = byteIdx
             for (startBit,signal) in self._sortedSignals:
                 if signal.SignalMultiplexerId or signal.SignalIsMultiplexer:
                     continue
@@ -98,12 +52,12 @@ class CanMsgLayoutDecoder(object):
                             #1 check any gap
                             if  startBit%8 != self._unusedBitsHead[byteIdx]:
                                 #create gap signal
-                                self._laidSignals[self._gap+str(self._gapIdx)] = CANSignal(self._gap+str(self._gapIdx),self._unusedBitsHead[byteIdx],startBit%8-self._unusedBitsHead[byteIdx])
+                                self._laidSignals[self._gap+str(self._gapIdx)] = CANSignal(self._gap+str(self._gapIdx),self._unusedBitsHead[byteIdx],startBit%8-self._unusedBitsHead[byteIdx],littleEndian=1)
                                 #shift unused bit position
                                 self._unusedBitsHead[byteIdx] = startBit%8
                                 self._gapIdx += 1
                             #create signal within one byte
-                            self._laidSignals[signal.SignalName+str(self._mulByteIdx)] = CANSignal(signal.SignalName,signal.SignalStartBit%8,signal.SignalLength,littleEndian=1)
+                            self._laidSignals[signal.SignalName] = CANSignal(signal.SignalName,signal.SignalStartBit%8,signal.SignalLength,littleEndian=1)
                             self._unusedBitsHead[byteIdx] += signal.SignalLength# unusedBits indicates 
                         else:                    
                             while signal.SignalLength + self._unusedBitsHead[byteIdx] > 8:
@@ -128,7 +82,7 @@ class CanMsgLayoutDecoder(object):
                             #check any gap
                             if startBit%8 - signal.SignalLength +1 >  self._unusedBitsHead[byteIdx] :
                                 #create gap signal
-                                self._laidSignals[self._gap+str(self._gapIdx)] = CANSignal(self._gap+str(self._gapIdx),self._unusedBitsHead[byteIdx],startBit%8-signal.SignalLength+1-self._unusedBitsHead[byteIdx])
+                                self._laidSignals[self._gap+str(self._gapIdx)] = CANSignal(self._gap+str(self._gapIdx),self._unusedBitsHead[byteIdx],startBit%8-signal.SignalLength+1-self._unusedBitsHead[byteIdx],littleEndian=1)
                                 #shift unused bit position
                                 self._unusedBitsHead[byteIdx] = startBit%8-signal.SignalLength+1
                                 self._gapIdx += 1
@@ -142,10 +96,17 @@ class CanMsgLayoutDecoder(object):
                                 signal.SignalLength -= signal.SignalStartBit%8-self._unusedBitsHead[byteIdx] + 1
                                 #signal.SignalStartBit += 8*(byteIdx+1)-1
                                 signal.SignalStartBit = 8*(byteIdx+2)-1
+                                self._unusedBitsHead[byteIdx] = signal.SignalStartBit%8+1
                                 if byteIdx < 7:
                                     byteIdx += 1
                             else:                              
                                 #create signal within signal byte
                                 self._laidSignals[signal.SignalName+str(self._mulByteIdx)] = CANSignal(signal.SignalName+str(self._mulByteIdx),signal.SignalStartBit%8,signal.SignalLength,littleEndian=0)
-                                self._mulByteIdx = 0                       
+                                self._mulByteIdx = 0    
+                                self._unusedBitsHead[byteIdx] = signal.SignalStartBit%8+1 # todo: this is a bug
+                #gap stuffing at the tail of byte
+            if self._unusedBitsHead[byteIdxTemp] <= self.tailBit:
+                    self._laidSignals[self._gap+str(self._gapIdx)] = CANSignal(self._gap+str(self._gapIdx),self._unusedBitsHead[byteIdxTemp],self.tailBit-self._unusedBitsHead[byteIdxTemp]+1,littleEndian=1)   
+                    self._gapIdx +=1
+                    self._unusedBitsHead[byteIdxTemp] = self.tailBit+1
         return self._laidSignals
