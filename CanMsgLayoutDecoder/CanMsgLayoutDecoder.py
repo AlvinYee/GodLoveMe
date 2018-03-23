@@ -4,9 +4,11 @@ Created on 12th Mar, 2018
 @author: Alvin Ye
 '''
 from dbcCoreModel.CoreModel import CANSignal
+from dbcCoreModel.CoreModel import CanMsg
+from dbcCoreModel.CoreModel import CanNode
 class CanMsgLayoutDecoder(object):
     '''
-    classdocs
+    supporting all kinds of gaps,different endianness, multiple-byte
     '''
 
     def __init__(self, msgObject):
@@ -16,10 +18,6 @@ class CanMsgLayoutDecoder(object):
         self.msg = msgObject
         self._unusedBitsHead = [0,0,0,0,0,0,0,0]
         self._unusedBitsTail = [7,7,7,7,7,7,7,7]
-#         self.fieldDef = ''
-#         self._prefix   = ' unit8 '
-#         self._delimiter = ' : '
-#         self._postfix  = ';\n'
         self._gap      = 'unused'
         self._gapIdx   = 0
         self._mulByteIdx   = 0
@@ -27,23 +25,47 @@ class CanMsgLayoutDecoder(object):
         self._laidSignals= {}
         self.headBit = 0
         self.tailBit = 7
-
+        self._multiplexerIds = []
+        self._virtualNode = None
+        self._virtualMsg = None
+        self._virtualMultiplexer = None
+        
     def sortSignal(self):
         for signal in self.msg.MsgSignals.values():
             self._sortedSignals[signal.SignalStartBit] = signal
             #sort signals in the dict by start bit, but return a list of tuples!
         self._sortedSignals = sorted(self._sortedSignals.items(),key = lambda d:d[0])
-
+        
+    def createLayoutMuliplexer(self):
+        for signal in self.msg.MsgSignals.values():
+            if signal.SignalMultiplexer:
+                self._virtualNode = CanNode('_virtualNode')
+                self._virtualMultiplexer = signal
+                self._virtualMsg = CanMsg(self.msg.MsgId,self.msg.MsgName+"M", self.msg.MsgLen)
+                self._virtualMsg.appendSignal(signal.SignalName,signal)
+                self._virtualNode.appendTxMsg(self._virtualMsg.MsgName,self._virtualMsg)
+            elif signal.SignalMultiplexerId not in self._multiplexerIds and not signal.SignalMultiplexer:
+                self._multiplexerIds.append(signal.SignalMultiplexerId)
+                self._virtualMsg = CanMsg(self.msg.MsgId,self.msg.MsgName+signal.SignalMultiplexerId,self.msg.MsgLen)
+                self._virtualMsg.appendSignal(self._virtualMultiplexer.SignalName,self._virtualMultiplexer)
+                self._virtualMsg.appendSignal(signal.SignalName,signal)
+                self._virtualNode.appendTxMsg(self._virtualMsg.MsgName,self._virtualMsg)
+            elif signal.SignalMultiplexerId in self._multiplexerIds and not signal.SignalMultiplexer :
+                self._virtualNode.NodeTxMsgs[self.msg.MsgName+signal.SignalMultiplexerId].appendSignal(signal.SignalName,signal)
+            else:
+                raise AttributeError
+        return self._virtualNode
+                        
     def createLayout(self):
         #TODO:       
         self.sortSignal()
         for byteIdx in range(0,8):
             byteIdxTemp = byteIdx
             for (startBit,signal) in self._sortedSignals:
-                if signal.SignalMultiplexerId or signal.SignalIsMultiplexer:
-                    continue
+#                 if signal.SignalMultiplexerId or signal.SignalMultiplexer:
+#                     continue
                 #iterate from byte0-byte7
-                if byteIdx * 8 <= startBit <= (byteIdx+1) * 8-1:
+                if byteIdxTemp * 8 <= startBit <= (byteIdxTemp+1) * 8-1:
                     #check endian-ness
                     if signal.SignalLittleEndian > 0 :
                         #this is Intel
