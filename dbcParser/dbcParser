@@ -3,6 +3,7 @@
 Created on 9th Mar, 2018
 
 @author: Alvin Ye
+caution: multiplexer parsing is supported, but no handling.
 '''
 import dbcCoreModel.CoreModel
 import re
@@ -39,20 +40,20 @@ class dbcParser(object):
     def versionHdl(self,line):
         self.patten = 'VERSION\s+"(?P<version>\S+)"'
         reg = re.search(self.patten ,line)
-        if reg:
+        try:
             self._canNetwork.Version = reg.group('version')
-        else:
-            raise AttributeError('no version defined')
+        except:
+            print("WARINING: version definition violation")
         
     def nodeHdl(self,line):
         self.patten = 'BU_\s*:\s*(?P<nodes>.+)\s*'
         reg = re.search(self.patten ,line)
         reg = re.sub('\s+', ' ', reg.group('nodes')).strip()
-        if reg:
+        try:
             for nodeName in reg.split(' '):
                 self._canNetwork.appendNodes(nodeName,dbcCoreModel.CoreModel.CanNode(nodeName))
-        else:
-            raise AttributeError('no node defined')
+        except:
+            print('WARINING: node definition violation')
 
     def msgHdl(self,line):
         self.patten = 'BO_\s+(?P<msgId>\d+)\s+(?P<msgName>\S+)\s*:\s*(?P<length>\d+)\s+(?P<msgSender>\S+)'
@@ -61,12 +62,15 @@ class dbcParser(object):
         try:
             self._currentMsgSender = self._canNetwork._nodes[reg.group('msgSender')]
         except KeyError:
-            print('the msg sender {0} is not in the list of ecu nodes'.format(reg.group('msgSender')))
+            print('WARINING: the msg sender {0} is not in the list of node definition'.format(reg.group('msgSender')))
             self._currentMsgSender = dbcCoreModel.CoreModel.CanNode(reg.group('msgSender'))
             self._canNetwork.appendNodes(self._currentMsgSender.NodeName,self._currentMsgSender)
             
-        #create a message object    
-        self._currentMsg = dbcCoreModel.CoreModel.CanMsg(reg.group('msgId'),reg.group('msgName'),reg.group('length'),msgSender = self._currentMsgSender)
+        #create a message object 
+        try:   
+            self._currentMsg = dbcCoreModel.CoreModel.CanMsg(int(reg.group('msgId')),reg.group('msgName'),int(reg.group('length')),msgSender = self._currentMsgSender)
+        except:
+            print("message definition violation")
         #add this message to parent node's tx message
         self._canNetwork.Nodes[self._currentMsg.MsgSender.NodeName].appendTxMsg(self._currentMsg.MsgName,self._currentMsg)
 
@@ -78,21 +82,20 @@ class dbcParser(object):
         self.pattern += '\[\s*(?P<valueMin>\S+)\s*\|\s*(?P<valueMax>\S+)\s*\]\s*"?(?P<unit>[^"]*)?"?\s+(?P<receivers>.+)'
         reg = re.search(self.pattern, line)
         #create a signal object
-        self._currentSignal= dbcCoreModel.CoreModel.CANSignal(reg.group('name'),reg.group('startBit'),reg.group('length'),reg.group('littleEndian'),reg.group('signed'),
-                                                 reg.group('factor'),reg.group('offset'),reg.group('valueMin'),reg.group('valueMax'),reg.group('unit'),
+        try:
+            self._currentSignal= dbcCoreModel.CoreModel.CANSignal(reg.group('name'),int(reg.group('startBit')),int(reg.group('length')),reg.group('littleEndian'),reg.group('signed'),
+                                                 float(reg.group('factor')),float(reg.group('offset')),float(reg.group('valueMin')),float(reg.group('valueMax')),reg.group('unit'),
                                                  reg.group('isMultiplexer'),reg.group('multiplexerId'),msgCarrier = self._currentMsg)
+        except:
+            print("ERROR: signal definition violation")
         #add this signal to parent msg
         self._currentMsg.appendSignal(self._currentSignal.SignalName, self._currentSignal)
         
-if __name__ == "__main__":
-    import sys
-    myParser = dbcParser()
-    myParser.parseDbc(sys.argv[1])
-    for nodeName,node in myParser._canNetwork.Nodes.items():
-        print("{0}".format(nodeName))
-        for msgName,msg in node.NodeTxMsgs.items():
-            print("        {0}".format(msgName))
-            for signalName,signal in msg.MsgSignals.items():
-                print("                {0},start-{1},len-{2},endian-{3},sign-{4},factor-{5},offset-{6},Min-{7},Max-{8},unit-{9}"
-                      .format(signalName,signal.SignalStartBit,signal.SignalLength,signal.SignalLittleEndian,signal.SignalSigned,signal.SignalFactor,signal.SignalOffset,signal.SignalMinValue,signal.SignalMaxValue,signal.SignalUnit))
-    print('dbc parsing succeed')
+    def iterateDbc(self):
+        for nodeName,node in self._canNetwork.Nodes.items():
+            print("{0}".format(nodeName))
+            for msgName,msg in node.NodeTxMsgs.items():
+                print("        {0}".format(msgName))
+                for signalName,signal in msg.MsgSignals.items():
+                    print("                {0},start:{1},len:{2},endian:{3},sign:{4},factor:{5},offset:{6},Min:{7},Max:{8},unit:{9}"
+                          .format(signalName,signal.SignalStartBit,signal.SignalLength,signal.SignalLittleEndian,signal.SignalSigned,signal.SignalFactor,signal.SignalOffset,signal.SignalMinValue,signal.SignalMaxValue,signal.SignalUnit))

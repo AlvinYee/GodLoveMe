@@ -4,7 +4,7 @@ Created on 9th Mar, 2018
 
 @author: Alvin Ye
 
-this is a light-weight dbc abstraction on minimal core CAN elements
+this is a light-weight dbc abstraction of minimal core CAN elements
 '''
 
 class CanNetwork(object):
@@ -124,8 +124,8 @@ class CANSignal(object):
     '''
     classdocs
     '''
-    def __init__(self, name, startBit, length, littleEndian=True, signed=False, factor=1.0, offset=0.0, valueMin=0,
-                 valueMax=0, unit="", isMultiplexer=False, multiplexerId=None,msgCarrier = None):
+    def __init__(self, name, startBit, length, littleEndian=1, signed=False, factor=1.0, offset=0.0, valueMin=0.0,
+                 valueMax=0.0, unit="", Multiplexer=None, multiplexerId=None,msgCarrier = None):
         self._name = name
         self._startBit = startBit
         self._length = length
@@ -136,7 +136,7 @@ class CANSignal(object):
         self._valueMin = valueMin
         self._valueMax = valueMax
         self._unit = unit
-        self._isMultiplexer = isMultiplexer
+        self._Multiplexer = Multiplexer
         self._multiplexerId = multiplexerId
         self._msgCarrier = msgCarrier
         
@@ -148,10 +148,18 @@ class CANSignal(object):
     def SignalStartBit(self):
         return self._startBit
     
+    @SignalStartBit.setter
+    def SignalStartBit(self,startBit):
+        self._startBit = startBit
+        
     @property
     def SignalLength(self):
         return self._length
     
+    @SignalLength.setter
+    def SignalLength(self,length):
+        self._length = length
+        
     @property
     def SignalLittleEndian(self):
         return self._littleEndian
@@ -181,9 +189,13 @@ class CANSignal(object):
         return self._unit
     
     @property
-    def SignalIsMultiplexer(self):
-        return self._isMultiplexer
+    def SignalMultiplexer(self):
+        return self._Multiplexer
     
+    @SignalMultiplexer.setter
+    def SignalMultiplexer(self,multiplexer):
+        self._Multiplexer = multiplexer    
+        
     @property
     def SignalMultiplexerId(self):
         return self._multiplexerId
@@ -197,5 +209,5 @@ class CANSignal(object):
         return self._msgCarrier
     
     @SignalMsgCarrier.setter
-    def SginalMsgCarrier(self,msgCarrier):
+    def SignalMsgCarrier(self,msgCarrier):
         self._msgCarrier = msgCarrier
