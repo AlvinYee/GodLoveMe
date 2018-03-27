@@ -3,13 +3,17 @@ Created on 13th,March,2018
 
 @author: Alvin Ye
 '''
-class c_signalBitField_Genertor():
+
+
+class Signalbit_field_generator:
+
+
     '''
     this class acts to slice a message into-byte long and create signal field inside every byte
     '''
     def __init__(self,laidSignals):
         self._laidSignals = laidSignals
-        self._byteSlicedSignals= [[]]
+        self._byte_slicedSignals= [[]]
         self._syntax_type = 'uint8'
         self._syntax_struct = 'struct'
         self._syntax_def    = 'typedef'
@@ -19,42 +23,42 @@ class c_signalBitField_Genertor():
         self._byteIdx = 0
         self._syntax_define = '#define'
         
-        for byteslice in self.byteSlicer():
-            byteslice.reverse()
+        for byte_slice in self.byte_slicer():
+            byte_slice.reverse()
         
-    def byteSlicer(self):
+    def byte_slicer(self):
         for signal in self._laidSignals.values():
-            self._totalLen += signal.SignalLength
+            self._totalLen += signal.signal_len
             if self._totalLen <= (self._byteIdx+1)*8:
-                self._byteSlicedSignals[self._byteIdx].append(signal)
+                self._byte_slicedSignals[self._byteIdx].append(signal)
             else:
-                self._byteSlicedSignals.append([])
+                self._byte_slicedSignals.append([])
                 self._byteIdx +=1
-                self._byteSlicedSignals[self._byteIdx].append(signal)
-        return self._byteSlicedSignals
+                self._byte_slicedSignals[self._byteIdx].append(signal)
+        return self._byte_slicedSignals
     
-    def bitField_Genertor(self,file):
-        for byteslice in self._byteSlicedSignals:
-            for signal in byteslice:
-                file.write(self.c_syntax_bitField_structor(signal.SignalName, signal.SignalLength))
+    def bit_field_generator(self,file):
+        for byte_slice in self._byte_slicedSignals:
+            for signal in byte_slice:
+                file.write(self.bit_field_struct_syntax(signal.signal_name, signal.signal_len))
                 
-    def c_syntax_bitField_structor(self,signalName,signalLenth):
-        return ('\t'+self._syntax_type+' '+signalName+self._syntax_delimiter+str(signalLenth)+self._syntax_ending)      
+    def bit_field_struct_syntax(self,signal_name,signalLenth):
+        return ('\t'+self._syntax_type+' '+signal_name+self._syntax_delimiter+str(signalLenth)+self._syntax_ending)
     
-    def signalAccessUnion_Genertor(self,unionMsg,file):   
-        for byteslice in self._byteSlicedSignals:
-            for signal in byteslice:
-                if not signal.SignalName.startswith('unused'):
-                    file.write(self.signalAccessMacroSyntaxUnion(signal.SignalName,unionMsg.MsgName, signal.SignalMsgCarrier.MsgName))    
+    def signal_access_union_generator(self,unionMsg,file):
+        for byte_slice in self._byte_slicedSignals:
+            for signal in byte_slice:
+                if not signal.signal_name.startswith('unused'):
+                    file.write(self.signal_access_macro_syntax_union(signal.signal_name,unionMsg.msg_name, signal.signal_msg_carrier.msg_name))
                     
-    def signalAccessStruct_Genertor(self,file):   
-        for byteslice in self._byteSlicedSignals:
-            for signal in byteslice:
-                if not signal.SignalName.startswith('unused'):
-                    file.write(self.signalAccessMacroSyntaxStruct(signal.SignalName, signal.SignalMsgCarrier.MsgName))  
+    def signal_access_struct_generator(self,file):
+        for byte_slice in self._byte_slicedSignals:
+            for signal in byte_slice:
+                if not signal.signal_name.startswith('unused'):
+                    file.write(self.signal_access_macro_syntax_struct(signal.signal_name, signal.signal_msg_carrier.msg_name))
                 
-    def signalAccessMacroSyntaxUnion(self,signalName,unionMsgName,structMsgName):
-        return ('{0} b_{1}_b\t\t({2}.{3}.{4})\n'.format(self._syntax_define,signalName,unionMsgName,structMsgName,signalName))   
+    def signal_access_macro_syntax_union(self,signal_name,unionmsg_name,structmsg_name):
+        return '{0} b_{1}_b\t\t({2}.{3}.{4})\n'.format(self._syntax_define,signal_name,unionmsg_name,structmsg_name,signal_name)
       
-    def signalAccessMacroSyntaxStruct(self,signalName,structMsgName):
-        return ('{0} b_{1}_b\t\t({2}.{3})\n'.format(self._syntax_define,signalName,structMsgName,signalName))   
+    def signal_access_macro_syntax_struct(self,signal_name,structmsg_name):
+        return '{0} b_{1}_b\t\t({2}.{3})\n'.format(self._syntax_define,signal_name,structmsg_name,signal_name)
