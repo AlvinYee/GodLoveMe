@@ -9,42 +9,42 @@ sys.path.append('../../')
 
 from dbcParser import dbcParser
 from CanMsgLayoutDecoder.CanMsgLayoutDecoder import CanMsgLayoutDecoder
-from codeGenerator.CanMsgLayoutGenerator import c_signalBitField_Genertor
+from codeGenerator.CanMsgLayoutGenerator import Signalbit_field_generator
 
 if __name__ == "__main__":
     s = ''
     myParser = dbcParser()
     try:
-        myParser.parseDbc(sys.argv[1])
+        myParser.parser_dbc(sys.argv[1])
         print('[INFO]: dbc parsing succeed')
         with open(sys.argv[2],'w') as hFile:
             with open(sys.argv[3],'w') as cFile:
-                for msg in myParser._canNetwork.Nodes['ESCL'].NodeTxMsgs.values():
+                for msg in myParser._canNetwork.nodes['ESCL'].node_tx_msgs.values():
                     try:
-                        for m in CanMsgLayoutDecoder(msg).createLayoutMuliplexer().NodeTxMsgs.values():
-                            hFile.write("typedef struct _c_{0}_msgTypeTag\n".format(m.MsgName))
+                        for m in CanMsgLayoutDecoder(msg).create_layout_multiplexer().node_tx_msgs.values():
+                            hFile.write("typedef struct _c_{0}_msg_typeTag\n".format(m.msg_name))
                             hFile.write("{\n")
-                            signalGenerator = c_signalBitField_Genertor(CanMsgLayoutDecoder(m).createLayout())
-                            signalGenerator.bitField_Genertor(hFile) 
+                            signalGenerator = Signalbit_field_generator(CanMsgLayoutDecoder(m).create_layout())
+                            signalGenerator.bit_field_generator(hFile)
                             hFile.write("\n}")
-                            s += "\t_c_{0}_msgType {1};\n".format(m.MsgName,m.MsgName)    
-                            hFile.write("_c_{0}_msgType;\n".format(m.MsgName))
-                            signalGenerator.signalAccessUnion_Genertor(msg,cFile) 
-                        hFile.write("typedef union _u_{0}_msgTypeTag\n".format(msg.MsgName))
+                            s += "\t_c_{0}_msg_type {1};\n".format(m.msg_name,m.msg_name)
+                            hFile.write("_c_{0}_msg_type;\n".format(m.msg_name))
+                            signalGenerator.signal_access_union_generator(msg,cFile)
+                        hFile.write("typedef union _u_{0}_msg_typeTag\n".format(msg.msg_name))
                         hFile.write("{\n")
                         hFile.write(s)
                         hFile.write("\n}")    
-                        hFile.write("_u_{0}_msgType;\n".format(msg.MsgName))   
-                        cFile.write("_u_{0}_msgType\t\t{1};\n".format(msg.MsgName,msg.MsgName))             
+                        hFile.write("_u_{0}_msg_type;\n".format(msg.msg_name))
+                        cFile.write("_u_{0}_msg_type\t\t{1};\n".format(msg.msg_name,msg.msg_name))
                     except TypeError:
-                        hFile.write("typedef struct _c_{0}_msgTypeTag\n".format(msg.MsgName))
+                        hFile.write("typedef struct _c_{0}_msg_typeTag\n".format(msg.msg_name))
                         hFile.write("{\n")
-                        signalGenerator = c_signalBitField_Genertor(CanMsgLayoutDecoder(msg).createLayout())
-                        signalGenerator.bitField_Genertor(hFile)    
+                        signalGenerator = Signalbit_field_generator(CanMsgLayoutDecoder(msg).create_layout())
+                        signalGenerator.bit_field_generator(hFile)
                         hFile.write("\n}")    
-                        hFile.write("_c_{0}_msgType;\n".format(msg.MsgName))
-                        cFile.write("_c_{0}_msgType\t\t{1};\n".format(msg.MsgName,msg.MsgName))
-                        signalGenerator.signalAccessStruct_Genertor(cFile) 
+                        hFile.write("_c_{0}_msg_type;\n".format(msg.msg_name))
+                        cFile.write("_c_{0}_msg_type\t\t{1};\n".format(msg.msg_name,msg.msg_name))
+                        signalGenerator.signal_access_struct_generator(cFile)
                 print("[INFO]: file generation succeed")
     except UnicodeDecodeError:
         print("[ERROR] dbc decoding error, please convert dbc to utf-8 first")
