@@ -7,207 +7,225 @@ Created on 9th Mar, 2018
 this is a light-weight dbc abstraction of minimal core CAN elements
 '''
 
+
 class CanNetwork(object):
+
+
     '''
     classdocs
     '''
-    def __init__(self,baudrate = None,version = None,nodes = None):
+    def __init__(self, baud_rate=None,version=None):
         '''
         Constructor
         '''
-        self._baudrate = baudrate
+        self._baud_rate = baud_rate
         self._version = version
-        self._nodes   = {}
+        self._nodes = {}
         
     @property
-    def Version(self):
+    def version(self):
         return self._version
-    @Version.setter
-    def Version(self,version):
+
+    @version.setter
+    def version(self, version):
         self._version = version
+
     @property
-    def Nodes(self):
+    def nodes(self):
         return self._nodes
     
-    def appendNodes(self,nodeName,nodeObject):
-        self._nodes[nodeName] = nodeObject
-        
+    def append_nodes(self, node_name, node):
+        self._nodes[node_name] = node
+
+
 class CanNode(object):
+
+
     '''
     classsdocs
     '''
-    def __init__(self,nodeName,nodeId=None,txMsgs = None,rxMsgs = None):
-        self._nodeId = nodeId
-        self._nodeName = nodeName
+    def __init__(self, node_name, node_id=None, tx_msgs=None, rx_msgs=None):
+        self._node_id = node_id
+        self._node_name = node_name
         self._txMsgs = {}
         self._rxMsgs = {}
         
     @property
-    def NodeId(self):
-        return self._nodeId
+    def node_id(self):
+        return self._node_id
     
     @property
-    def NodeName(self):
-        return self._nodeName
+    def node_name(self):
+        return self._node_name
     
     @property
-    def NodeTxMsgs(self):
+    def node_tx_msgs(self):
         return self._txMsgs
     
-    def appendTxMsg(self,txMsgName,txMsgObject):
-        self._txMsgs[txMsgName] = txMsgObject
+    def append_tx_msg(self, txmsg_name, tx_msg):
+        self._txMsgs[txmsg_name] = tx_msg
         
     @property
-    def NodeRxmsgs(self):
+    def node_rx_msg(self):
         return self._rxMsgs
         
-    def appendRxMsg(self,rxMsgName,rxMsgObject):
-        self._rxMsgs[rxMsgName] = rxMsgObject
-        
+    def append_rx_msg(self, rxmsg_name, rx_msg):
+        self._rxMsgs[rxmsg_name] = rx_msg
+
+
 class CanMsg(object):
+
+
     '''
     classdocs
     '''
-    def __init__(self,msgId,msgName,msgLen,msgType = None,msgSender= None, msgReceivers = None,msgSendType = None,signals = None):
+    def __init__(self, msg_id, msg_name, msg_len, msg_type=None, msg_sender=None, msg_receivers=None, msgSendType=None, signals = None):
         '''
         Constructor
         '''
-        self._msgId = msgId
-        self._msgName = msgName
-        self._msgLen   = msgLen
-        self._msgType  = msgType
-        self._msgSender = msgSender
-        self._msgReceivers = msgReceivers
+        self._msg_id = msg_id
+        self._msg_name = msg_name
+        self._msg_len = msg_len
+        self._msg_type = msg_type
+        self._msg_sender = msg_sender
+        self._msg_receivers = msg_receivers
         self._msgSendType = msgSendType
         self._signals = {}
                     
     @property
-    def MsgId(self):
-        return self._msgId
+    def msg_id(self):
+        return self._msg_id
     
     @property
-    def MsgName(self):
-        return self._msgName
-    @MsgName.setter
-    def MsgName(self,msgName):
-        self._msgName = msgName
+    def msg_name(self):
+        return self._msg_name
+
+    @msg_name.setter
+    def msg_name(self, msg_name):
+        self._msg_name = msg_name
+
     @property
-    def MsgLen(self):
-        return self._msgLen
+    def msg_len(self):
+        return self._msg_len
     
     @property
-    def MsgType(self):
-        return self._msgType
+    def msg_type(self):
+        return self._msg_type
     
     @property
-    def MsgSender(self):
-        return self._msgSender
-    @MsgSender.setter
-    def MsgSender(self,nodeObject):
-        self._msgSender = nodeObject
+    def msg_sender(self):
+        return self._msg_sender
+
+    @msg_sender.setter
+    def msg_sender(self, nodeObject):
+        self._msg_sender = nodeObject
     
     @property
-    def MsgReceivers(self):
-        return self._msgReceivers
+    def msg_receivers(self):
+        return self._msg_receivers
     
-    def appendMsgRecevier(self,nodeName,nodeObject):
-        self._msgReceivers[nodeName] = nodeObject
+    def append_msg_receiver(self, node_name, node):
+        self._msg_receivers[node_name] = node
         
     @property
-    def MsgSignals(self):
+    def msg_signals(self):
         return self._signals
     
-    def appendSignal(self,signalName,signalObject):
-        self._signals[signalName] = signalObject
-        
-class CANSignal(object):
+    def append_signal(self, signal_name, signal):
+        self._signals[signal_name] = signal
+        signal.signal_msg_carrier = self
+
+
+class CanSignal(object):
+
+
     '''
     classdocs
     '''
-    def __init__(self, name, startBit, length, littleEndian=1, signed=False, factor=1.0, offset=0.0, valueMin=0.0,
-                 valueMax=0.0, unit="", Multiplexer=None, multiplexerId=None,msgCarrier = None):
+    def __init__(self, name, start_bit, length, little_endian=1, signed=False, factor=1.0, offset=0.0, value_min=0.0,
+                 value_max=0.0, unit="", multiplexer=None, multiplexer_id=None, msg_carrier=None):
         self._name = name
-        self._startBit = startBit
+        self._startBit = start_bit
         self._length = length
-        self._littleEndian = littleEndian
+        self._little_endian = little_endian
         self._signed = signed
         self._factor = factor
         self._offset = offset
-        self._valueMin = valueMin
-        self._valueMax = valueMax
+        self._valueMin = value_min
+        self._valueMax = value_max
         self._unit = unit
-        self._Multiplexer = Multiplexer
-        self._multiplexerId = multiplexerId
-        self._msgCarrier = msgCarrier
+        self._Multiplexer = multiplexer
+        self._multiplexerId = multiplexer_id
+        self._msg_carrier = msg_carrier
         
     @property
-    def SignalName(self):
+    def signal_name(self):
         return self._name
     
     @property
-    def SignalStartBit(self):
+    def signal_start_bit(self):
         return self._startBit
     
-    @SignalStartBit.setter
-    def SignalStartBit(self,startBit):
-        self._startBit = startBit
+    @signal_start_bit.setter
+    def signal_start_bit(self, start_bit):
+        self._startBit = start_bit
         
     @property
-    def SignalLength(self):
+    def signal_len(self):
         return self._length
     
-    @SignalLength.setter
-    def SignalLength(self,length):
+    @signal_len.setter
+    def signal_len(self, length):
         self._length = length
         
     @property
-    def SignalLittleEndian(self):
-        return self._littleEndian
+    def signal_little_endian(self):
+        return self._little_endian
     
     @property
-    def SignalSigned(self):
+    def signal_signed(self):
         return self._signed
     
     @property
-    def SignalFactor(self):
+    def signal_factor(self):
         return self._factor
     
     @property
-    def SignalOffset(self):
+    def signal_offset(self):
         return self._offset
     
     @property
-    def SignalMinValue(self):
+    def signal_min_values(self):
         return self._valueMin
     
     @property
-    def SignalMaxValue(self):
+    def signal_max_value(self):
         return self._valueMax
     
     @property
-    def SignalUnit(self):
+    def signal_unit(self):
         return self._unit
     
     @property
-    def SignalMultiplexer(self):
+    def signal_multiplexer(self):
         return self._Multiplexer
     
-    @SignalMultiplexer.setter
-    def SignalMultiplexer(self,multiplexer):
+    @signal_multiplexer.setter
+    def signal_multiplexer(self, multiplexer):
         self._Multiplexer = multiplexer    
         
     @property
-    def SignalMultiplexerId(self):
+    def signal_multiplexer_id(self):
         return self._multiplexerId
     
-    @SignalMultiplexerId.setter
-    def SignalMultiplexerId(self,multiplexerId):
-        self._multiplexerId = multiplexerId
+    @signal_multiplexer_id.setter
+    def signal_multiplexer_id(self, multiplexer_id):
+        self._multiplexerId = multiplexer_id
         
     @property
-    def SignalMsgCarrier(self):
-        return self._msgCarrier
+    def signal_msg_carrier(self):
+        return self._msg_carrier
     
-    @SignalMsgCarrier.setter
-    def SignalMsgCarrier(self,msgCarrier):
-        self._msgCarrier = msgCarrier
+    @signal_msg_carrier.setter
+    def signal_msg_carrier(self, msg_carrier):
+        self._msg_carrier = msg_carrier
