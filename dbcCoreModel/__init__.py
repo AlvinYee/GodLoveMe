@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*- 
 __author__ = "Alvin Ye"
-__all__ = ['CanNetwork','CanNode','CanMsg','CANSignal']
+__all__ = ['CanNetwork', 'CanNode', 'CanMsg', 'CanSignal']
 
 from dbcCoreModel.CoreModel import *
