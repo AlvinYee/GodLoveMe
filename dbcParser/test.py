@@ -4,14 +4,14 @@ Created on 13th,March,2018
 @author: Alvin Ye
 '''
 import sys
-sys.path.append('../')
 import dbcParser
+sys.path.append('../')
 if __name__ == "__main__":
     myParser = dbcParser.dbcParser()
     try:
-        myParser.parseDbc(sys.argv[1])
-        with open(sys.argv[2],'w') as f:
-            myParser.iterateDbc(f)
+        myParser.parser_dbc(sys.argv[1])
+        with open(sys.argv[2], 'w') as f:
+            myParser.iterate_dbc(f)
         print('[INFO]: dbc parsing succeed')
     except UnicodeDecodeError:
         print("[ERROR] dbc decoding error, please convert dbc to utf-8 first")
