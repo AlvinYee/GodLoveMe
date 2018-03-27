@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*- 
 __author__ = "Alvin Ye"
-__all__ = ['I2CCANParGenerator','cfgGenerator']
+__all__ = ['Signalbit_field_generator']
 
-from codeGenerator.CanMsgLayoutGenerator  import   c_bitField_Genertor
+from codeGenerator.CanMsgLayoutGenerator import Signalbit_field_generator
