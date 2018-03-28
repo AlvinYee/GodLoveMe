@@ -14,7 +14,7 @@ class CanNetwork(object):
     '''
     classdocs
     '''
-    def __init__(self, baud_rate=None,version=None):
+    def __init__(self, baud_rate=None, version=None):
         '''
         Constructor
         '''
@@ -145,17 +145,17 @@ class CanSignal(object):
     def __init__(self, name, start_bit, length, little_endian=1, signed=False, factor=1.0, offset=0.0, value_min=0.0,
                  value_max=0.0, unit="", multiplexer=None, multiplexer_id=None, msg_carrier=None):
         self._name = name
-        self._startBit = start_bit
+        self._start_bit = start_bit
         self._length = length
         self._little_endian = little_endian
         self._signed = signed
         self._factor = factor
         self._offset = offset
-        self._valueMin = value_min
-        self._valueMax = value_max
+        self._value_min = value_min
+        self._value_max = value_max
         self._unit = unit
-        self._Multiplexer = multiplexer
-        self._multiplexerId = multiplexer_id
+        self._multiplexer = multiplexer
+        self._multiplexer_id = multiplexer_id
         self._msg_carrier = msg_carrier
         
     @property
@@ -164,11 +164,11 @@ class CanSignal(object):
     
     @property
     def signal_start_bit(self):
-        return self._startBit
+        return self._start_bit
     
     @signal_start_bit.setter
     def signal_start_bit(self, start_bit):
-        self._startBit = start_bit
+        self._start_bit = start_bit
         
     @property
     def signal_len(self):
@@ -196,11 +196,11 @@ class CanSignal(object):
     
     @property
     def signal_min_values(self):
-        return self._valueMin
+        return self._value_min
     
     @property
     def signal_max_value(self):
-        return self._valueMax
+        return self._value_max
     
     @property
     def signal_unit(self):
@@ -208,19 +208,19 @@ class CanSignal(object):
     
     @property
     def signal_multiplexer(self):
-        return self._Multiplexer
+        return self._multiplexer
     
     @signal_multiplexer.setter
     def signal_multiplexer(self, multiplexer):
-        self._Multiplexer = multiplexer    
+        self._multiplexer = multiplexer
         
     @property
     def signal_multiplexer_id(self):
-        return self._multiplexerId
+        return self._multiplexer_id
     
     @signal_multiplexer_id.setter
     def signal_multiplexer_id(self, multiplexer_id):
-        self._multiplexerId = multiplexer_id
+        self._multiplexer_id = multiplexer_id
         
     @property
     def signal_msg_carrier(self):
