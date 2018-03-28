@@ -1,13 +1,13 @@
 '''
-Created on 13th,March,2018
+Created on 13th, March, 2018
 
 @author: Alvin Ye
 '''
 import sys
-import dbcParser
 sys.path.append('../')
+import dbcParser
 if __name__ == "__main__":
-    myParser = dbcParser.dbcParser()
+    myParser = dbcParser.DbcParser()
     try:
         myParser.parser_dbc(sys.argv[1])
         with open(sys.argv[2], 'w') as f:
@@ -19,5 +19,5 @@ if __name__ == "__main__":
         print("[ERROR] input the correct name of ESCL")
     except FileNotFoundError:
         print("[ERROR]: no dbc file designated")
-    except IndexError:
-        print("[ERROR]: input or output directory is not properly given")
+    # except IndexError:
+    #     print("[ERROR]: input or output directory is not properly given")
