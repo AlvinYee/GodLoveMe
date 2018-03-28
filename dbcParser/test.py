@@ -19,5 +19,5 @@ if __name__ == "__main__":
         print("[ERROR] input the correct name of ESCL")
     except FileNotFoundError:
         print("[ERROR]: no dbc file designated")
-    # except IndexError:
-    #     print("[ERROR]: input or output directory is not properly given")
+    except IndexError:
+        print("[ERROR]: input or output directory is not properly given")
