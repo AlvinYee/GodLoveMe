@@ -105,5 +105,5 @@ class SignalBitFieldSyntaxGenerator:
                     else:
                         s = s.strip('| ')
                         s = '(' + s + ')\n'
-                    s = '#define b_{0}_b\t'.format(virtual_signals[0].signal_name) + s
+                    s = '#define b_{0}_b\t'.format(virtual_signals[-1].signal_name) + s
                 file.write(s)
