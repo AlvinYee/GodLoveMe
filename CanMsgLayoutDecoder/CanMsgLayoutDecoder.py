@@ -1,137 +1,109 @@
 '''
-Created on 12th Mar, 2018
+Created on 13th, March, 2018
 
 @author: Alvin Ye
 '''
-from dbcCoreModel.CoreModel import CanSignal
-from dbcCoreModel.CoreModel import CanMsg
-from dbcCoreModel.CoreModel import CanNode
-import copy
 
 
-class CanMsgLayoutDecoder(object):
+class SignalBitFieldSyntaxGenerator:
     '''
-    supporting all kinds of gaps, different endian-ness, multiple-byte, multiplexer
+    this class acts to slice a message into-byte long and create signal field inside every byte
     '''
+    def __init__(self, decoded_msg):
+        self.decoded_msg = decoded_msg
+        self._sliced_signals_by_byte = [[]]
+        self._syntax_type = 'uint8'
+        self._syntax_struct = 'struct'
+        self._syntax_def = 'typedef'
+        self._syntax_delimiter = ":"
+        self._syntax_ending = ';\n'
+        self._syntax_define = '#define'
+        self._syntax_data_type = ''
+        self._total_len = 0
+        self._byte_idx = 0
 
-    def __init__(self, msg_object):
-        '''
-        Constructor
-        '''
-        self.msg = msg_object
-        self._unusedBitsHead = [0, 0, 0, 0, 0, 0, 0, 0]
-        self._unusedBitsTail = [7, 7, 7, 7, 7, 7, 7, 7]
-        self._gap = 'unused'
-        self._gapIdx = 0
-        self._mulByteIdx = 0
-        self._sortedSignals = {}
-        self._laidSignals = {}
-        self.headBit = 0
-        self.tailBit = 7
-        self._multiplexer_ids = []
-        self._virtualNode = None
-        self._virtualMsg = None
-        self._virtualMultiplexer = None
+        for byte_slice in self._slice_msg_by_byte():
+            byte_slice.reverse()
         
-    def _sort_signal(self):
-        for signal in self.msg.msg_signals.values():
-            self._sortedSignals[signal.signal_start_bit] = signal
-            #  sort signals in the dict by start bit, but return a list of tuples!
-        self._sortedSignals = sorted(self._sortedSignals.items(), key=lambda d: d[0])
-        
-    def create_layout_multiplexer(self):
-        '''this func aims to create multi-msg for multiplexer'''
-        for signal in self.msg.msg_signals.values():
-            if signal.signal_multiplexer:
-                self._virtualNode = CanNode('_virtualNode')
-                self._virtualMultiplexer = signal
-                self._virtualMsg = CanMsg(self.msg.msg_id, self.msg.msg_name+"M", self.msg.msg_len)
-                self._virtualMsg.append_signal(signal.signal_name, signal)
-                self._virtualNode.append_tx_msg(self._virtualMsg.msg_name, self._virtualMsg)
-            elif signal.signal_multiplexer_id not in self._multiplexer_ids and not signal.signal_multiplexer:
-                self._multiplexer_ids.append(signal.signal_multiplexer_id)
-                self._virtualMsg = CanMsg(self.msg.msg_id, self.msg.msg_name+signal.signal_multiplexer_id, self.msg.msg_len)
-                self._virtualMultiplexer = copy.deepcopy(self._virtualMultiplexer)
-                self._virtualMsg.append_signal(self._virtualMultiplexer.signal_name, self._virtualMultiplexer)
-                self._virtualMsg.append_signal(signal.signal_name, signal)
-                self._virtualNode.append_tx_msg(self._virtualMsg.msg_name, self._virtualMsg)
-            elif signal.signal_multiplexer_id in self._multiplexer_ids and not signal.signal_multiplexer:
-                self._virtualNode.node_tx_msgs[self.msg.msg_name+signal.signal_multiplexer_id].append_signal(signal.signal_name, signal)
+    def _slice_msg_by_byte(self):
+        for signal in self.decoded_msg.msg_signals.values():
+            self._total_len += signal.signal_len
+            if self._total_len <= (self._byte_idx + 1) * 8:
+                self._sliced_signals_by_byte[self._byte_idx].append(signal)
             else:
-                raise AttributeError
-        return self._virtualNode
-                        
-    def create_layout(self):
-        self._sort_signal()
-        for byteIdx in range(0, 8):
-            byte_idx_temp = byteIdx
-            for (start_bit, signal) in self._sortedSignals:
-                #  iterate from byte0-byte7
-                if byte_idx_temp * 8 <= start_bit <= (byte_idx_temp+1) * 8-1:
-                    #  check endian-ness
-                    if signal.signal_little_endian > 0:
-                        #  this is Intel
-                        #  check multiple-byte?
-                        if self._unusedBitsHead[byteIdx] + signal.signal_len < 9:
-                            #  1 check any gap
-                            if start_bit % 8 != self._unusedBitsHead[byteIdx]:
-                                #  create gap signal
-                                self._laidSignals[self._gap+str(self._gapIdx)] = CanSignal(self._gap+str(self._gapIdx), self._unusedBitsHead[byteIdx], start_bit % 8-self._unusedBitsHead[byteIdx], little_endian=1, msg_carrier=signal.signal_msg_carrier)
-                                #  shift unused bit position
-                                self._unusedBitsHead[byteIdx] = start_bit % 8
-                                self._gapIdx += 1
-                            #  create signal within one byte
-                            self._laidSignals[signal.signal_name] = CanSignal(signal.signal_name, signal.signal_start_bit % 8, signal.signal_len, little_endian=1, msg_carrier=signal.signal_msg_carrier)
-                            #  tracking unused bit
-                            self._unusedBitsHead[byteIdx] += signal.signal_len
-                        else:                    
-                            while signal.signal_len + self._unusedBitsHead[byteIdx] > 8:
-                                self._laidSignals[signal.signal_name+str(self._mulByteIdx)] = CanSignal(signal.signal_name + str(self._mulByteIdx), signal.signal_start_bit % 8, self.tailBit-self._unusedBitsHead[byteIdx]+1, little_endian=1, msg_carrier=signal.signal_msg_carrier)
-                                self._mulByteIdx += 1
-                                signal.signal_len -= self.tailBit-self._unusedBitsHead[byteIdx] + 1
-                                signal.signal_start_bit += self.tailBit-self._unusedBitsHead[byteIdx] + 1
-                                #  current byte will be full
-                                self._unusedBitsHead[byteIdx] = self.tailBit + 1
-                                if byteIdx < 7:
-                                    byteIdx += 1
-                            else:
-                                #  create signal within signal byte
-                                self._laidSignals[signal.signal_name+str(self._mulByteIdx)] = CanSignal(signal.signal_name+str(self._mulByteIdx), signal.signal_start_bit % 8, signal.signal_len, little_endian=1, msg_carrier=signal.signal_msg_carrier)
-                                self._mulByteIdx = 0
-                                #  unusedBits needs to shifted 
-                                self._unusedBitsHead[byteIdx] += signal.signal_len
+                self._sliced_signals_by_byte.append([])
+                self._byte_idx += 1
+                self._sliced_signals_by_byte[self._byte_idx].append(signal)
+        return self._sliced_signals_by_byte
+    
+    def bit_field_generator(self, file):
+        for byte_slice in self._sliced_signals_by_byte:
+            for signal in byte_slice:
+                file.write(self.bit_field_syntax(signal.signal_name, signal.signal_len))
+                
+    def bit_field_syntax(self, signal_name, signal_len):
+        return ('\t' + self._syntax_type + ' ' + signal_name + self._syntax_delimiter + str(
+            signal_len) + self._syntax_ending)
+    
+    def signal_union_generator(self, union_msg, file):
+        for byte_slice in self._sliced_signals_by_byte:
+            for signal in byte_slice:
+                if not signal.signal_name.startswith('unused'):
+                    file.write(self.union_signal_macro_syntax(signal.signal_name, union_msg.msg_name,
+                                                              signal.signal_msg_carrier.msg_name))
+                    
+    def signal_struct_generator(self, file):
+        for byte_slice in self._sliced_signals_by_byte:
+            for signal in byte_slice:
+                if not signal.signal_name.startswith('unused'):
+                    file.write(self.struct_signal_macro_syntax(signal.signal_name, signal.signal_msg_carrier.msg_name))
+
+    def union_signal_macro_syntax(self, signal_name, union_msg_name, struct_name):
+        return '{0} b_{1}_b\t\t({2}.{3}.{4})\n'.format(self._syntax_define, signal_name, union_msg_name,
+                                                       struct_name, signal_name)
+      
+    def struct_signal_macro_syntax(self, signal_name, struct_msg_name):
+        return '{0} b_{1}_b\t\t({2}.{3})\n'.format(self._syntax_define, signal_name, struct_msg_name, signal_name)
+
+    def signal_access_macro_syntax(self, over_byte_bound_virtual_signals, file):
+        if over_byte_bound_virtual_signals:
+            for virtual_signals in over_byte_bound_virtual_signals:
+                s = ''
+                bit_shift = 0
+                if virtual_signals[0].signal_little_endian:
+                    # this is Intel
+                    if virtual_signals[0].signal_len <= 8:
+                        self._syntax_data_type = 'uint8'
+                    elif virtual_signals[0].signal_len <= 16:
+                        self._syntax_data_type = 'uint16'
+                    elif virtual_signals[0].signal_len <= 32:
+                        self._syntax_data_type = 'uint32'
+                    elif virtual_signals[0].signal_len <= 64:
+                        print('{0} - signal length is greater than CUP width, single access not supported'.format(virtual_signals[0].signal_name))
+                        continue
+                    for signal in virtual_signals[1:]:
+                        s += '((({0}){1})<<{2}) | '.format(self._syntax_data_type, signal.signal_name, bit_shift)
+                        bit_shift += signal.signal_len
                     else:
-                        #  this is Motorola
-                        #  check multiple-byte?
-                        if self._unusedBitsHead[byteIdx] + signal.signal_len < 9:
-                            #  check any gap
-                            if start_bit%8 - signal.signal_len + 1 > self._unusedBitsHead[byteIdx]:
-                                # create gap signal
-                                self._laidSignals[self._gap+str(self._gapIdx)] = CanSignal(self._gap+str(self._gapIdx), self._unusedBitsHead[byteIdx], start_bit % 8-signal.signal_len+1-self._unusedBitsHead[byteIdx], little_endian=1, msg_carrier=signal.signal_msg_carrier)
-                                # shift unused bit position
-                                self._unusedBitsHead[byteIdx] = start_bit % 8-signal.signal_len + 1
-                                self._gapIdx += 1
-                            # create signal within signal byte
-                            self._laidSignals[signal.signal_name] = CanSignal(signal.signal_name, signal.signal_start_bit % 8, signal.signal_len, little_endian=0, msg_carrier=signal.signal_msg_carrier)
-                            self._unusedBitsHead[byteIdx] += signal.signal_len
-                        else:         
-                            while signal.signal_start_bit % 8 - self._unusedBitsHead[byteIdx] +1 < signal.signal_len:
-                                self._laidSignals[signal.signal_name+str(self._mulByteIdx)] = CanSignal(signal.signal_name + str(self._mulByteIdx), signal.signal_start_bit % 8, signal.signal_start_bit % 8+1, little_endian=0, msg_carrier=signal.signal_msg_carrier)
-                                self._mulByteIdx += 1
-                                signal.signal_len -= signal.signal_start_bit % 8-self._unusedBitsHead[byteIdx] + 1
-                                # signal.signal_start_bit + =  8*(byteIdx+1)-1
-                                signal.signal_start_bit = 8 * (byteIdx + 2) - 1
-                                self._unusedBitsHead[byteIdx] = signal.signal_start_bit % 8 + 1
-                                if byteIdx < 7:
-                                    byteIdx += 1
-                            else:                              
-                                # create signal within signal byte
-                                self._laidSignals[signal.signal_name+str(self._mulByteIdx)] = CanSignal(signal.signal_name+str(self._mulByteIdx), signal.signal_start_bit % 8, signal.signal_len, little_endian=0, msg_carrier=signal.signal_msg_carrier)
-                                self._mulByteIdx = 0    
-                                self._unusedBitsHead[byteIdx] = signal.signal_start_bit % 8+1
-                # gap stuffing at the tail of byte
-            if self._unusedBitsHead[byte_idx_temp] <= self.tailBit:
-                    self._laidSignals[self._gap+str(self._gapIdx)] = CanSignal(self._gap+str(self._gapIdx), self._unusedBitsHead[byte_idx_temp], self.tailBit-self._unusedBitsHead[byte_idx_temp]+1, little_endian=1, msg_carrier=signal.signal_msg_carrier)
-                    self._gapIdx += 1
-                    self._unusedBitsHead[byte_idx_temp] = self.tailBit+1
-        return self._laidSignals
+                        s = s.strip('| ')
+                        s = '(' + s + ')\n'
+                    s = '#define b_{0}_b\t'.format(virtual_signals[0].signal_name) + s
+                else:
+                    virtual_signals.reverse()
+                    if virtual_signals[-1].signal_len <= 8:
+                        self._syntax_data_type = 'uint8'
+                    elif virtual_signals[0].signal_len <= 16:
+                        self._syntax_data_type = 'uint16'
+                    elif virtual_signals[0].sinal_len <= 32:
+                        self._syntax_data_type = 'uint32'
+                    elif virtual_signals[0].signal_len <= 64:
+                        print('{0} - signal length is greater than CUP width, single access not supported'.format(virtual_signals[0].signal_name))
+                        continue
+                    for signal in virtual_signals[:-1]:
+                        s += '((({0}){1})<<{2}) | '.format(self._syntax_data_type, signal.signal_name, bit_shift)
+                        bit_shift += signal.signal_len
+                    else:
+                        s = s.strip('| ')
+                        s = '(' + s + ')\n'
+                    s = '#define b_{0}_b\t'.format(virtual_signals[0].signal_name) + s
+                file.write(s)
