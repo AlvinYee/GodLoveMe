@@ -11,7 +11,7 @@ import copy
 
 class CanMsgLayoutDecoder(object):
     '''
-    supporting all kinds of gaps,different endian-ness, multiple-byte,multiplexer
+    supporting all kinds of gaps, different endian-ness, multiple-byte, multiplexer
     '''
 
     def __init__(self, msg_object):
@@ -28,7 +28,7 @@ class CanMsgLayoutDecoder(object):
         self._laidSignals = {}
         self.headBit = 0
         self.tailBit = 7
-        self._multiplexerIds = []
+        self._multiplexer_ids = []
         self._virtualNode = None
         self._virtualMsg = None
         self._virtualMultiplexer = None
@@ -48,14 +48,14 @@ class CanMsgLayoutDecoder(object):
                 self._virtualMsg = CanMsg(self.msg.msg_id, self.msg.msg_name+"M", self.msg.msg_len)
                 self._virtualMsg.append_signal(signal.signal_name, signal)
                 self._virtualNode.append_tx_msg(self._virtualMsg.msg_name, self._virtualMsg)
-            elif signal.signal_multiplexer_id not in self._multiplexerIds and not signal.signal_multiplexer:
-                self._multiplexerIds.append(signal.signal_multiplexer_id)
+            elif signal.signal_multiplexer_id not in self._multiplexer_ids and not signal.signal_multiplexer:
+                self._multiplexer_ids.append(signal.signal_multiplexer_id)
                 self._virtualMsg = CanMsg(self.msg.msg_id, self.msg.msg_name+signal.signal_multiplexer_id, self.msg.msg_len)
                 self._virtualMultiplexer = copy.deepcopy(self._virtualMultiplexer)
                 self._virtualMsg.append_signal(self._virtualMultiplexer.signal_name, self._virtualMultiplexer)
                 self._virtualMsg.append_signal(signal.signal_name, signal)
                 self._virtualNode.append_tx_msg(self._virtualMsg.msg_name, self._virtualMsg)
-            elif signal.signal_multiplexer_id in self._multiplexerIds and not signal.signal_multiplexer:
+            elif signal.signal_multiplexer_id in self._multiplexer_ids and not signal.signal_multiplexer:
                 self._virtualNode.node_tx_msgs[self.msg.msg_name+signal.signal_multiplexer_id].append_signal(signal.signal_name, signal)
             else:
                 raise AttributeError
@@ -65,20 +65,20 @@ class CanMsgLayoutDecoder(object):
         self._sort_signal()
         for byteIdx in range(0, 8):
             byte_idx_temp = byteIdx
-            for (startBit, signal) in self._sortedSignals:
+            for (start_bit, signal) in self._sortedSignals:
                 #  iterate from byte0-byte7
-                if byte_idx_temp * 8 <= startBit <= (byte_idx_temp+1) * 8-1:
+                if byte_idx_temp * 8 <= start_bit <= (byte_idx_temp+1) * 8-1:
                     #  check endian-ness
                     if signal.signal_little_endian > 0:
                         #  this is Intel
                         #  check multiple-byte?
                         if self._unusedBitsHead[byteIdx] + signal.signal_len < 9:
                             #  1 check any gap
-                            if startBit % 8 != self._unusedBitsHead[byteIdx]:
+                            if start_bit % 8 != self._unusedBitsHead[byteIdx]:
                                 #  create gap signal
-                                self._laidSignals[self._gap+str(self._gapIdx)] = CanSignal(self._gap+str(self._gapIdx), self._unusedBitsHead[byteIdx], startBit % 8-self._unusedBitsHead[byteIdx], little_endian=1, msg_carrier=signal.signal_msg_carrier)
+                                self._laidSignals[self._gap+str(self._gapIdx)] = CanSignal(self._gap+str(self._gapIdx), self._unusedBitsHead[byteIdx], start_bit % 8-self._unusedBitsHead[byteIdx], little_endian=1, msg_carrier=signal.signal_msg_carrier)
                                 #  shift unused bit position
-                                self._unusedBitsHead[byteIdx] = startBit % 8
+                                self._unusedBitsHead[byteIdx] = start_bit % 8
                                 self._gapIdx += 1
                             #  create signal within one byte
                             self._laidSignals[signal.signal_name] = CanSignal(signal.signal_name, signal.signal_start_bit % 8, signal.signal_len, little_endian=1, msg_carrier=signal.signal_msg_carrier)
@@ -105,11 +105,11 @@ class CanMsgLayoutDecoder(object):
                         #  check multiple-byte?
                         if self._unusedBitsHead[byteIdx] + signal.signal_len < 9:
                             #  check any gap
-                            if startBit%8 - signal.signal_len + 1 > self._unusedBitsHead[byteIdx]:
+                            if start_bit%8 - signal.signal_len + 1 > self._unusedBitsHead[byteIdx]:
                                 # create gap signal
-                                self._laidSignals[self._gap+str(self._gapIdx)] = CanSignal(self._gap+str(self._gapIdx), self._unusedBitsHead[byteIdx], startBit % 8-signal.signal_len+1-self._unusedBitsHead[byteIdx], little_endian=1, msg_carrier=signal.signal_msg_carrier)
+                                self._laidSignals[self._gap+str(self._gapIdx)] = CanSignal(self._gap+str(self._gapIdx), self._unusedBitsHead[byteIdx], start_bit % 8-signal.signal_len+1-self._unusedBitsHead[byteIdx], little_endian=1, msg_carrier=signal.signal_msg_carrier)
                                 # shift unused bit position
-                                self._unusedBitsHead[byteIdx] = startBit % 8-signal.signal_len + 1
+                                self._unusedBitsHead[byteIdx] = start_bit % 8-signal.signal_len + 1
                                 self._gapIdx += 1
                             # create signal within signal byte
                             self._laidSignals[signal.signal_name] = CanSignal(signal.signal_name, signal.signal_start_bit % 8, signal.signal_len, little_endian=0, msg_carrier=signal.signal_msg_carrier)
